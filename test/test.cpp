@@ -1,4 +1,6 @@
 #include <raylib.h>
+
+#define ANIMATE_HPP_IMPLEMENTATION
 #include <animate.hpp>
 
 int main() {
@@ -9,7 +11,7 @@ int main() {
 	Rectangle rect = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Rectangle rect2 = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-	const std::string rect_to_screen_size = AnimationHandler::CreateAnimation("RectToScreenSize", [](float duration, float moment, void* obj){
+	const AnimationId rect_to_screen_size = AnimationHandler::CreateAnimation([](float duration, float moment, void* obj){
 		Rectangle* rect = static_cast<Rectangle*>(obj);
 
 		float nw = rect->width;

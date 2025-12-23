@@ -7,6 +7,8 @@
 #include <memory>
 #include <algorithm>
 
+typedef size_t AnimationId;
+
 class Animation {
 
 public:
@@ -40,14 +42,13 @@ private:
 class AnimationHandler {
 
 public:
-	static const std::string CreateAnimation(const std::string& id, std::function<void(float, float, void*)> update);
-    static void AttachAnimation(const std::string& id, void* obj, float duration, size_t repeat, std::function<void(void*)> reset = nullptr);
+	static const AnimationId CreateAnimation(std::function<void(float, float, void*)> update);
+    static void AttachAnimation(AnimationId id, void* obj, float duration, size_t repeat, std::function<void(void*)> reset = nullptr);
     static void UpdateAnimations(float dt);
 private:
-	static std::unordered_map<std::string, std::shared_ptr<Animation>> s_animations;
+    static size_t s_animation_count;
+	static std::unordered_map<AnimationId, std::unique_ptr<Animation>> s_animations;
 };
-
-#define ANIMATE_HPP_IMPLEMENTATION
 
 #ifdef ANIMATE_HPP_IMPLEMENTATION
 
@@ -89,12 +90,12 @@ void Animation::Update(float dt) {
     );
 }
 
-const std::string AnimationHandler::CreateAnimation(const std::string& id, std::function<void(float, float, void*)> update) {
-    s_animations[id] = std::make_shared<Animation>(update);
-    return id;
+const AnimationId AnimationHandler::CreateAnimation(std::function<void(float, float, void*)> update) {
+    s_animations[s_animation_count++] = std::make_unique<Animation>(update);
+    return s_animation_count;
 }
 
-void AnimationHandler::AttachAnimation(const std::string& id, void* obj, float duration, size_t repeat, std::function<void(void*)> reset = nullptr) {
+void AnimationHandler::AttachAnimation(AnimationId id, void* obj, float duration, size_t repeat, std::function<void(void*)> reset = nullptr) {
     s_animations.at(id)->Attach(obj, duration, repeat, reset);
 }
 
@@ -104,6 +105,7 @@ void AnimationHandler::UpdateAnimations(float dt) {
     }
 }
 
-std::unordered_map<std::string, std::shared_ptr<Animation>> AnimationHandler::s_animations = { };
+size_t AnimationHandler::s_animation_count = 0;
+std::unordered_map<AnimationId, std::unique_ptr<Animation>> AnimationHandler::s_animations = { };
 
 #endif
