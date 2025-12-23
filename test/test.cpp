@@ -24,16 +24,16 @@ int main() {
 		rect->height = nh;
 	});
 
-	AnimationHandler::AttachAnimation(rect_to_screen_size, &rect, 2.0f, 3, [](void* obj){
-		Rectangle* rect = static_cast<Rectangle*>(obj);
-		rect->width = 0.0f;
-		rect->height = 0.0f;
-	});
-
 	AnimationHandler::AttachAnimation(rect_to_screen_size, &rect2, 3.0f, 2, [](void* obj){
 		Rectangle* rect = static_cast<Rectangle*>(obj);
 		rect->width = 0.0f;
 		rect->height = 0.0f;
+	}, [rect_to_screen_size, &rect]() {
+		AnimationHandler::AttachAnimation(rect_to_screen_size, &rect, 2.0f, 3, [](void* obj){
+			Rectangle* rect = static_cast<Rectangle*>(obj);
+			rect->width = 0.0f;
+			rect->height = 0.0f;
+		});
 	});
 
 	while(!WindowShouldClose()) {
