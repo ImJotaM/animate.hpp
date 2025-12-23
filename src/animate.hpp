@@ -50,6 +50,11 @@ public:
 	static const AnimationId CreateAnimation(UpdateFunction update);
     static void AttachAnimation(AnimationId id, void* obj, float duration, size_t repeat, ResetFunction reset = nullptr, AfterFunction after = nullptr);
     static void UpdateAnimations(float dt);
+
+    static bool HasAnimation(AnimationId id);
+    static void RemoveAnimation(AnimationId id);
+    static void ClearAnimations();
+
 private:
     static size_t s_animation_count;
 	static std::unordered_map<AnimationId, std::unique_ptr<Animation>> s_animations;
@@ -76,7 +81,7 @@ void Animation::Update(float dt) {
         float moment = instance.time + dt;
         instance.time = moment > instance.duration ? instance.duration : moment;
         
-        m_update(instance.duration, instance.time, instance.obj);
+        if (m_update) m_update(instance.duration, instance.time, instance.obj);
 
         if (instance.time == instance.duration) {
             instance.repeat_count++;
@@ -86,6 +91,8 @@ void Animation::Update(float dt) {
 
             if (instance.repeat > 0 && instance.repeat_count == instance.repeat) {
                 instance.finished = true;
+                if (instance.after) instance.after();
+            } else if (instance.repeat == 0) {
                 if (instance.after) instance.after();
             }
         }
@@ -112,6 +119,18 @@ void AnimationHandler::UpdateAnimations(float dt) {
     for (const auto& [key, animation] : s_animations) {
         animation->Update(dt);
     }
+}
+
+bool AnimationHandler::HasAnimation(AnimationId id) {
+    return s_animations.find(id) != s_animations.end();
+}
+
+void AnimationHandler::RemoveAnimation(AnimationId id) {
+    s_animations.erase(id);
+}
+
+void AnimationHandler::ClearAnimations() {
+    s_animations.clear();
 }
 
 size_t AnimationHandler::s_animation_count = 0;
