@@ -9,28 +9,32 @@
 
 typedef size_t AnimationId;
 
-typedef std::function<void(float, float, void*)> UpdateFunction;
-typedef std::function<void(void*)> ResetFunction;
-typedef std::function<void(void)> AfterFunction;
+typedef std::function<void(float, void*)> AnimationUpdateFunction;
+
+struct AnimationEvents {
+    std::function<void()> onStart = nullptr;
+    std::function<void(void*)> onEachRepeatStart = nullptr;
+    std::function<void(void*)> onEachRepeatEnd = nullptr;
+    std::function<void()> onEnd = nullptr;
+};
 
 class Animation {
 
 public:
 
-	Animation(UpdateFunction update);
+	Animation(AnimationUpdateFunction update);
 	~Animation() = default;
 
-	void Attach(void* obj, float duration, size_t repeat, ResetFunction reset, AfterFunction after);
+	void Attach(void* obj, float duration, size_t repeat, AnimationEvents events);
 	void Update(float dt);
 
 private:
 
-	UpdateFunction m_update = nullptr;
+	AnimationUpdateFunction m_update = nullptr;
 	
 	struct AnimationInstance {
 		void* obj = nullptr;
-		ResetFunction reset = nullptr;
-        AfterFunction after = nullptr;
+		AnimationEvents events = { };
 
 		float duration = 0.0f;
 		size_t repeat = 0;
@@ -47,8 +51,8 @@ private:
 class AnimationHandler {
 
 public:
-	static const AnimationId CreateAnimation(UpdateFunction update);
-    static void AttachAnimation(AnimationId id, void* obj, float duration, size_t repeat, ResetFunction reset = nullptr, AfterFunction after = nullptr);
+	static const AnimationId CreateAnimation(AnimationUpdateFunction update);
+    static void AttachAnimation(AnimationId id, void* obj, float duration, size_t repeat, AnimationEvents events);
     static void UpdateAnimations(float dt);
 
     static bool HasAnimation(AnimationId id);
@@ -62,15 +66,14 @@ private:
 
 #ifdef ANIMATE_HPP_IMPLEMENTATION
 
-Animation::Animation(UpdateFunction update) {
+Animation::Animation(AnimationUpdateFunction update) {
     m_update = update;
 }
 
-void Animation::Attach(void* obj, float duration, size_t repeat, ResetFunction reset, AfterFunction after) {
+void Animation::Attach(void* obj, float duration, size_t repeat, AnimationEvents events) {
     AnimationInstance instance;
     instance.obj = obj;
-    instance.reset = reset;
-    instance.after = after;
+    instance.events = events;
     instance.duration = duration;
     instance.repeat = repeat;
     m_instances.push_back(instance);
@@ -78,22 +81,26 @@ void Animation::Attach(void* obj, float duration, size_t repeat, ResetFunction r
 
 void Animation::Update(float dt) {
     for (auto& instance : m_instances) {
-        float moment = instance.time + dt;
-        instance.time = moment > instance.duration ? instance.duration : moment;
         
-        if (m_update) m_update(instance.duration, instance.time, instance.obj);
+        instance.time += dt;
+        instance.time = instance.time > instance.duration ? instance.duration : instance.time;
+        
+        if (instance.repeat_count == 0 && instance.events.onStart) instance.events.onStart();
+        if (instance.events.onEachRepeatStart) instance.events.onEachRepeatStart(instance.obj);
+
+        if (m_update) m_update(instance.time / instance.duration, instance.obj);
 
         if (instance.time == instance.duration) {
             instance.repeat_count++;
             
-            if (instance.reset) instance.reset(instance.obj);
+            if (instance.events.onEachRepeatEnd) instance.events.onEachRepeatEnd(instance.obj);
             instance.time = 0.0f;
 
             if (instance.repeat > 0 && instance.repeat_count == instance.repeat) {
                 instance.finished = true;
-                if (instance.after) instance.after();
+                if (instance.events.onEnd) instance.events.onEnd();
             } else if (instance.repeat == 0) {
-                if (instance.after) instance.after();
+                if (instance.events.onEnd) instance.events.onEnd();
             }
         }
     }
@@ -106,13 +113,13 @@ void Animation::Update(float dt) {
     );
 }
 
-const AnimationId AnimationHandler::CreateAnimation(UpdateFunction update) {
+const AnimationId AnimationHandler::CreateAnimation(AnimationUpdateFunction update) {
     s_animations[s_animation_count] = std::make_unique<Animation>(update);
     return s_animation_count++;
 }
 
-void AnimationHandler::AttachAnimation(AnimationId id, void* obj, float duration, size_t repeat, ResetFunction reset, AfterFunction after) {
-    s_animations.at(id)->Attach(obj, duration, repeat, reset, after);
+void AnimationHandler::AttachAnimation(AnimationId id, void* obj, float duration, size_t repeat, AnimationEvents events) {
+    s_animations.at(id)->Attach(obj, duration, repeat, events);
 }
 
 void AnimationHandler::UpdateAnimations(float dt) {
