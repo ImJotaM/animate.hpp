@@ -1,0 +1,55 @@
+#include <raylib.h>
+#include <animate.hpp>
+
+int main() {
+	
+	InitWindow(800, 600, "Animation");
+	SetTargetFPS(60);
+
+	Rectangle rect = { 0.0f, 0.0f, 0.0f, 0.0f };
+	Rectangle rect2 = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+	const std::string rect_to_screen_size = AnimationHandler::CreateAnimation("RectToScreenSize", [](float duration, float moment, void* obj){
+		Rectangle* rect = static_cast<Rectangle*>(obj);
+
+		float nw = rect->width;
+		float nh = rect->height;
+		
+		nw = GetScreenWidth() / duration * moment;
+		nh = GetScreenHeight() / duration * moment;
+		
+		rect->width = nw;
+		rect->height = nh;
+	});
+
+	AnimationHandler::AttachAnimation(rect_to_screen_size, &rect, 2.0f, 3, [](void* obj){
+		Rectangle* rect = static_cast<Rectangle*>(obj);
+		rect->width = 0.0f;
+		rect->height = 0.0f;
+	});
+
+	AnimationHandler::AttachAnimation(rect_to_screen_size, &rect2, 3.0f, 2, [](void* obj){
+		Rectangle* rect = static_cast<Rectangle*>(obj);
+		rect->width = 0.0f;
+		rect->height = 0.0f;
+	});
+
+	while(!WindowShouldClose()) {
+		
+		float dt = GetFrameTime();
+
+		AnimationHandler::UpdateAnimations(dt);
+
+		BeginDrawing();
+		ClearBackground(BLACK);
+
+		DrawRectangleRec(rect, WHITE);
+		DrawRectangleRec(rect2, RED);
+
+		EndDrawing();
+	}
+
+	CloseWindow();
+
+	return 0;
+}

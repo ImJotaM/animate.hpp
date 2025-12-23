@@ -6,8 +6,8 @@ endif
 bin/:
 	mkdir bin
 
-main.exe: src/main.cpp bin/
-	g++ ./src/main.cpp -o ./bin/main.exe -I./raylib/include/ -L./raylib/lib/ -lraylib -lwinmm -lgdi32
+test.exe: test/test.cpp bin/
+	g++ ./test/test.cpp -o ./bin/test.exe -I./src/  -I./raylib/include/ -L./raylib/lib/ -lraylib -lwinmm -lgdi32
 
-run: main.exe
-	.\bin\main.exe
+run: test.exe
+	.\bin\test.exe
