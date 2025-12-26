@@ -7,6 +7,10 @@
 #include <memory>
 #include <algorithm>
 
+#ifdef ANIM_NAMESPACE
+namespace Anim {
+#endif
+
 typedef size_t AnimationId;
 
 typedef std::function<void(float, void*)> AnimationUpdateFunction;
@@ -64,7 +68,15 @@ private:
 	static std::unordered_map<AnimationId, std::unique_ptr<Animation>> s_animations;
 };
 
+#ifdef ANIM_NAMESPACE
+}
+#endif
+
 #ifdef ANIMATE_HPP_IMPLEMENTATION
+
+#ifdef ANIM_NAMESPACE
+namespace Anim {
+#endif
 
 Animation::Animation(AnimationUpdateFunction update) {
     m_update = update;
@@ -142,5 +154,9 @@ void AnimationHandler::ClearAnimations() {
 
 size_t AnimationHandler::s_animation_count = 0;
 std::unordered_map<AnimationId, std::unique_ptr<Animation>> AnimationHandler::s_animations = { };
+
+#ifdef ANIM_NAMESPACE
+}
+#endif
 
 #endif
