@@ -13,11 +13,16 @@ namespace Anim {
 
 typedef size_t AnimationId;
 
+typedef std::function<void()> AnimationOnStartFunction;
+typedef std::function<void(void*)> AnimationOnEachRepeatStart;
 typedef std::function<void(float, void*)> AnimationUpdateFunction;
+typedef std::function<void(void*)> AnimationOnEachRepeatEnd;
+typedef std::function<void()> AnimationOnEnd;
 
 struct AnimationEvents {
     std::function<void()> onStart = nullptr;
     std::function<void(void*)> onEachRepeatStart = nullptr;
+    AnimationUpdateFunction onUpdate = nullptr;
     std::function<void(void*)> onEachRepeatEnd = nullptr;
     std::function<void()> onEnd = nullptr;
 };
@@ -26,7 +31,7 @@ class Animation {
 
 public:
 
-	Animation(AnimationUpdateFunction update);
+	Animation(AnimationEvents events);
 	~Animation() = default;
 
 	void Attach(void* obj, float duration, size_t repeat, AnimationEvents events);
@@ -34,7 +39,7 @@ public:
 
 private:
 
-	AnimationUpdateFunction m_update = nullptr;
+	AnimationEvents m_events = { };
 	
 	struct AnimationInstance {
 		void* obj = nullptr;
@@ -55,7 +60,7 @@ private:
 class AnimationHandler {
 
 public:
-	static const AnimationId CreateAnimation(AnimationUpdateFunction update);
+	static const AnimationId CreateAnimation(AnimationEvents update);
     static void AttachAnimation(AnimationId id, void* obj, float duration, size_t repeat, AnimationEvents events);
     static void UpdateAnimations(float dt);
 
@@ -78,14 +83,20 @@ private:
 namespace Anim {
 #endif
 
-Animation::Animation(AnimationUpdateFunction update) {
-    m_update = update;
+Animation::Animation(AnimationEvents events) {
+    m_events = events;
 }
 
 void Animation::Attach(void* obj, float duration, size_t repeat, AnimationEvents events) {
     AnimationInstance instance;
     instance.obj = obj;
-    instance.events = events;
+
+    instance.events.onStart = events.onStart ? events.onStart : m_events.onStart;
+    instance.events.onEachRepeatStart = events.onEachRepeatStart ? events.onEachRepeatStart : m_events.onEachRepeatStart;
+    instance.events.onUpdate = events.onUpdate ? events.onUpdate : m_events.onUpdate;
+    instance.events.onEachRepeatEnd = events.onEachRepeatEnd ? events.onEachRepeatEnd : m_events.onEachRepeatEnd;
+    instance.events.onEnd = events.onEnd ? events.onEnd : m_events.onEnd;
+
     instance.duration = duration;
     instance.repeat = repeat;
     m_instances.push_back(instance);
@@ -94,25 +105,27 @@ void Animation::Attach(void* obj, float duration, size_t repeat, AnimationEvents
 void Animation::Update(float dt) {
     for (auto& instance : m_instances) {
         
+        auto& events = instance.events;
+
         instance.time += dt;
         instance.time = instance.time > instance.duration ? instance.duration : instance.time;
         
         if (instance.repeat_count == 0 && instance.events.onStart) instance.events.onStart();
-        if (instance.events.onEachRepeatStart) instance.events.onEachRepeatStart(instance.obj);
+        if (events.onEachRepeatStart) events.onEachRepeatStart(instance.obj);
 
-        if (m_update) m_update(instance.time / instance.duration, instance.obj);
+        if (events.onUpdate) events.onUpdate(instance.time / instance.duration, instance.obj);
 
         if (instance.time == instance.duration) {
             instance.repeat_count++;
             
-            if (instance.events.onEachRepeatEnd) instance.events.onEachRepeatEnd(instance.obj);
+            if (events.onEachRepeatEnd) events.onEachRepeatEnd(instance.obj);
             instance.time = 0.0f;
 
             if (instance.repeat > 0 && instance.repeat_count == instance.repeat) {
                 instance.finished = true;
-                if (instance.events.onEnd) instance.events.onEnd();
+                if (events.onEnd) events.onEnd();
             } else if (instance.repeat == 0) {
-                if (instance.events.onEnd) instance.events.onEnd();
+                if (events.onEnd) events.onEnd();
             }
         }
     }
@@ -125,7 +138,7 @@ void Animation::Update(float dt) {
     );
 }
 
-const AnimationId AnimationHandler::CreateAnimation(AnimationUpdateFunction update) {
+const AnimationId AnimationHandler::CreateAnimation(AnimationEvents update) {
     s_animations[s_animation_count] = std::make_unique<Animation>(update);
     return s_animation_count++;
 }
