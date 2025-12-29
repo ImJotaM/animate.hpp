@@ -31,9 +31,9 @@ int main() {
 		}
 	});
 
-	AnimationHandler::AttachAnimation(rect_to_screen_size, &rect2, 3.0f, 2, {
+	const InstanceId instance = AnimationHandler::AttachAnimation(rect_to_screen_size, &rect2, 3.0f, 2, {
 		.onEnd = [rect_to_screen_size, &rect]() {
-			AnimationHandler::AttachAnimation(rect_to_screen_size, &rect, 2.0f, 3, {
+			AnimationHandler::AttachAnimation(rect_to_screen_size, &rect, 2.0f, 0, {
 				.onEachRepeatEnd = [](void* obj){
 					Rectangle* rect = static_cast<Rectangle*>(obj);
 					rect->width = 0.0f;
@@ -43,11 +43,18 @@ int main() {
 		}
 	});
 
+	float gt = 0;
+
 	while(!WindowShouldClose()) {
 		
 		float dt = GetFrameTime();
+		gt += dt;
 
 		AnimationHandler::UpdateAnimations(dt);
+
+		if (gt >= 8) {
+			AnimationHandler::Stop(instance);
+		}
 
 		BeginDrawing();
 		ClearBackground(BLACK);
