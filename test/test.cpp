@@ -11,7 +11,7 @@ int main() {
 	Rectangle rect = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Rectangle rect2 = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-	const AnimationId rect_to_screen_size = AnimationHandler::CreateAnimation({
+	AnimationId rect_to_screen_size = AnimationHandler::CreateAnimation({
 		.onUpdate = [](float progress, void* obj){
 			Rectangle* rect = static_cast<Rectangle*>(obj);
 
@@ -31,9 +31,11 @@ int main() {
 		}
 	});
 
-	const InstanceId instance = AnimationHandler::AttachAnimation(rect_to_screen_size, &rect2, 3.0f, 2, {
-		.onEnd = [rect_to_screen_size, &rect]() {
-			AnimationHandler::AttachAnimation(rect_to_screen_size, &rect, 2.0f, 0, {
+	InstanceId next_animation_instance;
+
+	InstanceId instance = AnimationHandler::AttachAnimation(rect_to_screen_size, &rect2, 3.0f, 2, {
+		.onEnd = [rect_to_screen_size, &rect, &next_animation_instance]() {
+			next_animation_instance = AnimationHandler::AttachAnimation(rect_to_screen_size, &rect, 2.0f, 0, {
 				.onEachRepeatEnd = [](void* obj){
 					Rectangle* rect = static_cast<Rectangle*>(obj);
 					rect->width = 0.0f;
@@ -53,7 +55,7 @@ int main() {
 		AnimationHandler::UpdateAnimations(dt);
 
 		if (gt >= 8) {
-			AnimationHandler::Stop(instance);
+			AnimationHandler::Stop(next_animation_instance);
 		}
 
 		BeginDrawing();
